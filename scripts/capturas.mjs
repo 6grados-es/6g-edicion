@@ -24,10 +24,12 @@ const PANTALLAS = (process.env.PANTALLAS ? JSON.parse(process.env.PANTALLAS) : [
   ['guion', '#/v/2026-11-24-hummus-de-calabaza-para-el-otono/guion'],
   ['corte-subir', '#/v/2026-11-24-hummus-de-calabaza-para-el-otono/corte'],
   ['corte', '#/v/2026-11-23-crema-de-lentejas-rojas/corte'],
-  ['corte-menu', '#/v/2026-11-23-crema-de-lentejas-rojas/corte', `(() => { const p = document.querySelectorAll('.pieza')[2]; const r = p.getBoundingClientRect(); p.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 40, clientY: r.top + 20 })); })()`],
-  ['edicion-vacia', '#/v/2026-11-23-crema-de-lentejas-rojas/edicion'],
+  ['corte-sin-quitado', '#/v/2026-11-23-crema-de-lentejas-rojas/corte', `(() => { const b = document.querySelector('.x-lm-bquit'); if (b && /sí/.test(b.textContent)) b.click(); })()`],
+  ['corte-comentarios', '#/v/2026-11-23-crema-de-lentejas-rojas/corte', `(() => { const b = document.querySelector('.x-lm-bquit'); if (b && /no/.test(b.textContent)) b.click(); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', bubbles: true })); })()`],
+  ['edicion-sin-montar', '#/v/2026-11-23-crema-de-lentejas-rojas/edicion'],
   ['edicion', '#/v/2026-11-21-golden-milk-antes-de-dormir/edicion'],
-  ['atajos', '#/v/2026-11-23-crema-de-lentejas-rojas/corte', `document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '?', bubbles: true }))`],
+  ['edicion-catalogo', '#/v/2026-11-21-golden-milk-antes-de-dormir/edicion', `(() => { const b = document.querySelector('.x-fx-catnuevo'); if (b) b.click(); const f = document.querySelector('.x-fx-catform'); if (f) f.scrollIntoView({ block: 'center' }); })()`],
+  ['atajos', '#/v/2026-11-23-crema-de-lentejas-rojas/corte', `document.dispatchEvent(new KeyboardEvent('keydown', { key: '?', bubbles: true }))`],
 ]);
 const ANCHOS = (process.env.ANCHOS || '1280,820,390').split(',').map(Number);
 const TEMAS = (process.env.TEMAS || 'claro,oscuro').split(',');
@@ -60,10 +62,13 @@ async function ir(url, tema, ancho) {
   await cdp('Page.navigate', { url: BASE + '/?c=' + Date.now() + url });
   for (let i = 0; i < 40; i++) { if (await js(`!!document.querySelector('#app h1')`)) break; await espera(200); }
   await js(`HTMLMediaElement.prototype.play = function () { this.muted = true; return Promise.resolve(); }; document.fonts.ready.then(() => true)`);
-  await espera(900); // ondas y primer fotograma del vídeo
+  if (/\/(corte|edicion)$/.test(url)) for (let i = 0; i < 30; i++) { if (await js(`!!document.querySelector('.x-lm, #zona-subir, .vacio')`)) break; await espera(200); }
+  await espera(1200); // ondas y primer fotograma del vídeo
 }
 
 async function foto(nombre, ancho) {
+  // el vídeo del editor mide en vh: se fija a lo que mide con la ventana normal, para que no crezca al hacer la ventana tan alta como la página
+  await js(`document.querySelectorAll('.x-lm-pant').forEach((p) => { p.style.maxHeight = p.getBoundingClientRect().height + 'px'; }); true`);
   const h = Math.min(await js('Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)'), 3200);
   await cdp('Emulation.setDeviceMetricsOverride', { width: ancho, height: Math.max(h, 700), deviceScaleFactor: 2, mobile: ancho < 500 });
   await js('window.scrollTo(0, 0); true');

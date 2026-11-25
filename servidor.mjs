@@ -47,7 +47,7 @@ function cuerpo(req, max = 5e6) {
 // Firma de una carpeta: cambia cuando cambia cualquier archivo (lo usa la web para ver al momento lo que hace Claude).
 function firma(dir) {
   let s = '';
-  try { for (const n of fs.readdirSync(dir).sort()) { if (n.endsWith('.tmp') || n.startsWith('.')) continue; const st = fs.statSync(path.join(dir, n)); s += n + ':' + st.size + ':' + Math.round(st.mtimeMs) + ';'; } } catch {}
+  try { for (const n of fs.readdirSync(dir).sort()) { if (n.endsWith('.tmp') || n.startsWith('.') || n.startsWith('encargo-')) continue; const st = fs.statSync(path.join(dir, n)); s += n + ':' + st.size + ':' + Math.round(st.mtimeMs) + ';'; } } catch {}
   let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
   return String(h >>> 0);
 }
@@ -78,7 +78,8 @@ function guiones(dir) {
   return out;
 }
 function archivos(dir) {
-  return fs.readdirSync(dir).filter((n) => !n.startsWith('.') && !n.endsWith('.tmp')).map((n) => {
+  const fin = path.join(dir, 'final'), finales = fs.existsSync(fin) ? fs.readdirSync(fin).map((n) => 'final/' + n) : [];
+  return fs.readdirSync(dir).concat(finales).filter((n) => !path.basename(n).startsWith('.') && !n.endsWith('.tmp') && fs.statSync(path.join(dir, n)).isFile()).map((n) => {
     const st = fs.statSync(path.join(dir, n)); return { nombre: n, bytes: st.size, video: ES_VIDEO.test(n) };
   });
 }
@@ -155,6 +156,18 @@ const servidor = http.createServer(async (req, res) => {
   try {
     if (p === '/api/estado') return json(res, 200, { ok: true, carpeta: DIR, datos: DATOS, videos: VIDEOS });
 
+    // el catálogo de efectos de la persona (datos/efectos.json); si aún no tiene, el de ejemplo de la web
+    if (p === '/api/efectos' && req.method === 'GET') {
+      const f = path.join(DATOS, 'efectos.json'), l = leerJson(f, null);
+      return json(res, 200, { efectos: Array.isArray(l) ? l : null });
+    }
+    if (p === '/api/efectos' && req.method === 'PUT') {
+      const { efectos } = await cuerpo(req);
+      if (!Array.isArray(efectos)) return json(res, 400, { error: 'faltan los efectos' });
+      escribirJson(path.join(DATOS, 'efectos.json'), efectos);
+      return json(res, 200, { ok: true });
+    }
+
     if (p === '/api/videos' && req.method === 'GET') {
       const lista = fs.readdirSync(VIDEOS).filter((n) => idValido(n) && fs.existsSync(path.join(VIDEOS, n, 'video.json'))).map(resumen);
       return json(res, 200, { videos: lista });
@@ -175,11 +188,29 @@ const servidor = http.createServer(async (req, res) => {
 
       if (resto === '' && req.method === 'GET') {
         const v = completo(id);
-        const fuentes = [v.corte.fuente, v.corte.montado, v.edicion.video, ...v.archivos.filter((a) => a.video).map((a) => a.nombre)].filter(Boolean);
+        const fuentes = [v.corte.fuente, v.corte.montado, v.edicion.video, ...v.archivos.filter((a) => a.video).map((a) => a.nombre)].filter((x) => x && !x.includes("/"));
         for (const f of new Set(fuentes)) if (fs.existsSync(path.join(dir, f))) prepararOnda(dir, f);
         return json(res, 200, v);
       }
       if (resto === 'firma') return json(res, 200, { firma: firma(dir) });
+      // lo que pide el editor: la onda {dt, v} de un vídeo y las palabras [[a, b, texto]] de la transcripción
+      if (resto === 'editor/onda') {
+        const nombre = path.basename(url.searchParams.get('f') || ''); if (!nombreValido(nombre)) return json(res, 400, { error: 'nombre' });
+        const o = leerJson(path.join(dir, '.onda-' + nombre + '.json'), null);
+        if (!o || !o.picos) { if (fs.existsSync(path.join(dir, nombre))) prepararOnda(dir, nombre); return json(res, 404, { error: 'aún no hay onda' }); }
+        return json(res, 200, { dt: o.paso, v: o.picos.map((x) => Math.min(99, x)) });
+      }
+      if (resto === 'editor/palabras') {
+        const t = leerJson(path.join(dir, 'transcripcion.json'), null), ws = t && Array.isArray(t.palabras) ? t.palabras : [];
+        return json(res, 200, ws.filter((w) => w && isFinite(w.a) && isFinite(w.b)).map((w) => [+w.a, +w.b, String(w.p || '')]));
+      }
+      // lo último que se copió para Claude en cada etapa (por si el portapapeles falla, Claude lo puede leer de la carpeta)
+      m = resto.match(/^encargo\/(corte|edicion|guion|idea)$/);
+      if (m && req.method === 'POST') {
+        const { texto } = await cuerpo(req);
+        const f = path.join(dir, 'encargo-' + m[1] + '.md'), tmp = f + '.tmp'; fs.writeFileSync(tmp, String(texto ?? '')); fs.renameSync(tmp, f);
+        return json(res, 200, { ok: true });
+      }
 
       // guarda video.json entero; si Claude lo ha cambiado mientras tanto (mtime distinto), devuelve 409 con lo nuevo
       if (resto === 'json' && req.method === 'PUT') {
@@ -214,12 +245,12 @@ const servidor = http.createServer(async (req, res) => {
     }
 
     // los archivos de cada vídeo (vídeos, guiones, subtítulos…)
-    m = p.match(/^\/media\/([^/]+)\/([^/]+)$/);
-    if (m) { const dir = carpeta(m[1]); if (!nombreValido(m[2])) return json(res, 400, { error: 'nombre' }); return servirArchivo(req, res, path.join(dir, m[2])); }
+    m = p.match(/^\/media\/([^/]+)\/((?:final\/)?[^/]+)$/);
+    if (m) { const dir = carpeta(m[1]); if (!nombreValido(path.basename(m[2]))) return json(res, 400, { error: 'nombre' }); return servirArchivo(req, res, path.join(dir, m[2])); }
 
     // la web
     const rel = p === '/' ? 'index.html' : p.slice(1);
-    if (!/^(index\.html|app\.js|estilo\.css|marca\/[a-z0-9._-]+|marca\/fuentes\/[a-z0-9._-]+)$/i.test(rel)) return json(res, 404, { error: 'no existe' });
+    if (!/^(index\.html|app\.js|estilo\.css|editor\/[a-z0-9._-]+|marca\/[a-z0-9._-]+|marca\/fuentes\/[a-z0-9._-]+)$/i.test(rel)) return json(res, 404, { error: 'no existe' });
     return servirArchivo(req, res, path.join(DIR, 'web', rel));
   } catch (e) {
     return json(res, e.code === 400 ? 400 : 500, { error: String(e.message || e) });

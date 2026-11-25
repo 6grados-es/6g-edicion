@@ -235,3 +235,7 @@ body.completa .texto { max-height: calc(100vh - 260px); }
   .tab-cab { flex-wrap: wrap; } .tab-cab .bt { margin-left: 0; }
   .marca .app { display: none; }
 }
+
+/* en Corte y Edición el editor va suelto (es su propia mesa oscura): la caja de la etapa no se ve */
+.panel.panel-editor{background:none;border:0;padding:0;box-shadow:none}
+.panel.panel-editor>.ayuda-linea{margin:10px 4px 0}

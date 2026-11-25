@@ -226,7 +226,7 @@ function formNueva() {
 function versionDe(k) { const v = S.v; return k === 'guion' ? v.guion.version : k === 'corte' ? v.corte.version : k === 'edicion' ? v.edicion.version : 0; }
 function vistaVideo() {
   const v = S.v, f = document.createDocumentFragment(), c = IDX[v.etapa];
-  const vol = el('button', 'volver'); add(vol, '← Tablero (Esc)'); vol.addEventListener('click', () => { location.hash = '#/'; }); f.appendChild(vol);
+  const vol = el('button', 'volver'); add(vol, (S.ruta.etapa === 'corte' || S.ruta.etapa === 'edicion') && v.corte.fuente ? '← Tablero' : '← Tablero (Esc)'); vol.addEventListener('click', () => { location.hash = '#/'; }); f.appendChild(vol);
   const tit = el('div', 'titulo-video');
   add(tit, el('p', 'ceja', 'Vídeo · creado el ' + fmtF(v.creado) + (v.etapa === 'terminado' ? ' · listo' : '')), add(el('h1'), v.titulo, el('span', 'punto', '.')));
   f.appendChild(tit);
@@ -249,15 +249,14 @@ function avisoEtapa(k) {
   const T = {
     idea: ['Apunta la idea', 'Escribe o dicta qué quieres contar. Cuando esté, pulsa «Copiar a Claude», pégalo en tu Claude y te escribe el guion v1.'],
     guion: ['Revisa el guion', 'Retócalo aquí mismo o deja comentarios (Enter guarda cada uno). «Copiar a Claude» le pide la versión siguiente. Cuando te guste, grábalo y pásalo a Corte.'],
-    corte: ['Corta la grabación', 'Sube lo que has grabado. Claude lo transcribe y te propone un corte; tú quitas o recuperas trozos en la línea de tiempo o en el texto, y le pides la versión siguiente.'],
-    edicion: ['Edición por revisar', 'Claude monta tu corte y lo edita. Míralo, deja comentarios generales o con su minuto, y pide la versión siguiente hasta que la des por buena.']
+    corte: ['Corta la grabación', 'Sube lo que has grabado y pulsa «Copiar a Claude»: la transcribe y te propone un corte. Tú lo ajustas en la línea de tiempo o en el texto (quitar, recuperar, mover trozos) y le pides la versión siguiente. Cuando te guste, «Dar por bueno».'],
+    edicion: ['Edita el vídeo', 'Pon los efectos de tu catálogo en la línea de tiempo, deja comentarios generales o con su minuto y pulsa «Copiar a Claude» para la versión siguiente. Lo que ya ha montado Claude está debajo, en «Ver el vídeo que ya está montado».']
   }[k];
   const a = el('div', 'aviso'); add(a, el('b', null, T[0]), el('p', null, T[1])); return a;
 }
 function siguiente(k) { const i = IDX[k]; return i < 3 ? ETAPAS[i + 1] : null; }
 function botonesCab(k, { copiable = true, motivo = '' } = {}) {
   const v = S.v, der = el('div', 'der');
-  if ((k === 'corte' && v.corte.fuente) || (k === 'edicion' && v.edicion.version)) der.appendChild(boton('Pantalla completa (P)', { icono: 'completa', al: alternarCompleta }));
   if (v.etapa === k) {
     const sg = siguiente(k);
     der.appendChild(sg ? boton('Pasar a ' + sg.n + ' (⌘↵)', { icono: 'sig', al: avanzar }) : boton('Dar por buena (⌘↵)', { icono: 'ok', al: avanzar, dis: !v.edicion.version, titulo: v.edicion.version ? '' : 'Primero tiene que haber una edición' }));
@@ -337,14 +336,14 @@ function feedback(k, { conMinuto, tiempo, ir, nombreMinuto } = {}) {
     box._refrescarMinuto = () => { bn.querySelector('span').textContent = 'Nota en ' + fmt(tiempo().T) + ' (M)'; };
   }
   function nuevaNota() {
-    if (!conMinuto) return; ED.pausa && ED.pausa();
+    if (!conMinuto) return; 
     const t = tiempo(); notaN.replaceChildren();
     const ta2 = el('textarea'); ta2.rows = 2; ta2.placeholder = 'Qué quieres cambiar en ' + fmt(t.T) + ' (Enter guarda)';
     ta2.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { notaN.replaceChildren(); return; }
       if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return; e.preventDefault();
       const x = ta2.value.trim(); if (!x) return;
-      lista().push({ id: uid(), texto: x, v: ver, t: +t.t.toFixed(2), T: +t.T.toFixed(2) }); notaN.replaceChildren(); guardar(); pintarLista(); ED.repintarNotas && ED.repintarNotas();
+      lista().push({ id: uid(), texto: x, v: ver, t: +t.t.toFixed(2), T: +t.T.toFixed(2) }); notaN.replaceChildren(); guardar(); pintarLista();
     });
     const cm2 = el('div', 'con-mic'); add(cm2, ta2, botonMic(ta2)); notaN.appendChild(cm2); ta2.focus();
   }
@@ -362,302 +361,116 @@ function feedback(k, { conMinuto, tiempo, ir, nombreMinuto } = {}) {
     const r = el('div', 'fb-item' + (vivo ? '' : ' fb-viejo'));
     if (x.T != null) { const m = el('button', 'min', fmt(x.T)); m.type = 'button'; m.title = 'Ir a ' + fmt(x.T); m.addEventListener('click', () => ir && ir(x)); r.appendChild(m); }
     r.appendChild(el('p', null, (vivo ? '' : 'v' + (x.v || 0) + ' · ') + x.texto));
-    if (vivo) { const b = el('button', 'x', '✕'); b.type = 'button'; b.title = 'Quitar'; b.setAttribute('aria-label', 'Quitar comentario'); b.addEventListener('click', () => { v.feedback[k] = lista().filter((y) => y !== x); guardar(); pintarLista(); ED.repintarNotas && ED.repintarNotas(); }); r.appendChild(b); }
+    if (vivo) { const b = el('button', 'x', '✕'); b.type = 'button'; b.title = 'Quitar'; b.setAttribute('aria-label', 'Quitar comentario'); b.addEventListener('click', () => { v.feedback[k] = lista().filter((y) => y !== x); guardar(); pintarLista(); }); r.appendChild(b); }
     return r;
   }
   pintarLista();
   return box;
 }
 
-// ── corte: piezas de la grabación ([a, b] en segundos; fuera = cortado) ─────────────────────────────
-const PZ = {
-  unir(ps) {
-    const out = [];
-    ps.filter((p) => p.b - p.a > 0.001).sort((x, y) => x.a - y.a).forEach((p) => {
-      const u = out[out.length - 1];
-      if (u && !!u.fuera === !!p.fuera && Math.abs(u.b - p.a) < 0.02) u.b = p.b; else out.push({ a: +p.a.toFixed(3), b: +p.b.toFixed(3), fuera: !!p.fuera });
-    });
-    // trozos de menos de 0,08 s se funden con el anterior
-    for (let i = out.length - 1; i > 0; i--) if (out[i].b - out[i].a < 0.08) { out[i - 1].b = out[i].b; out.splice(i, 1); }
-    return out;
-  },
-  dividir(ps, t) { const out = []; ps.forEach((p) => { if (t > p.a + 0.05 && t < p.b - 0.05) out.push({ ...p, b: t }, { ...p, a: t }); else out.push({ ...p }); }); return out; },
-  marcar(ps, a, b, fuera) {
-    let q = PZ.dividir(PZ.dividir(ps, a), b);
-    q = q.map((p) => (p.a >= a - 0.01 && p.b <= b + 0.01 ? { ...p, fuera } : p));
-    return PZ.unir(q).map((p) => ({ ...p }));
-  },
-  en(ps, t) { return ps.findIndex((p) => t >= p.a - 1e-3 && t < p.b - 1e-3); },
-  total(ps) { return ps.reduce((s, p) => s + (p.fuera ? 0 : p.b - p.a), 0); },
-  aMontaje(ps, t) { let s = 0; for (const p of ps) { if (t <= p.a) break; if (!p.fuera) s += Math.min(t, p.b) - p.a; } return s; },
-  deMontaje(ps, T) { let s = 0; for (const p of ps) { if (p.fuera) continue; const d = p.b - p.a; if (T <= s + d) return p.a + (T - s); s += d; } const k = ps.filter((p) => !p.fuera).pop(); return k ? k.b : 0; }
-};
-
-// ── editor de vídeo (Corte y Edición) ────────────────────────────────────────────────────────
-const ED = {
-  desmontar() { if (ED.raf) cancelAnimationFrame(ED.raf); ED.raf = 0; if (ED.video) ED.video.pause(); ED.activo = false; ED.pausa = null; ED.repintarNotas = null; ED.pintarOnda = null; ED.acc = null; },
-  cache: new Map()   // un <video> por archivo: al repintar no se pierde el punto donde estabas
-};
-function videoPara(src) {
-  let v = ED.cache.get(src); if (v) return v;
-  v = document.createElement('video'); v.src = src; v.preload = 'auto'; v.playsInline = true; ED.cache.set(src, v); return v;
+// ── editor de Corte y Edición: el de las clases de 6 Grados (web/editor/), con los datos de este vídeo ─────────────
+const ED = { nuevo: null, subir: null, desmontar() { ED.nuevo = null; } };
+const EDM = { mod: null, fx: null };
+async function modulosEditor() {
+  if (!EDM.mod) [EDM.mod, EDM.fx] = await Promise.all([import('./editor/corte-editor.js'), import('./editor/corte-fx.js')]);
+  if (S.catalogo === undefined) { try { S.catalogo = (await api('/api/efectos')).j.efectos; } catch (e) { S.catalogo = null; } }
+  EDM.fx.ponerCatalogo(S.catalogo && S.catalogo.length ? S.catalogo : EDM.fx.EJEMPLO);
+  return EDM;
 }
-function crearEditor({ k, src, archivo, conPiezas, editable }) {
-  const V = S.v, cont = el('div'), video = videoPara(src); ED.video = video; ED.activo = true;
-  let ps = () => V.corte.piezas;
-  const hist = ED.hist && ED.hist.k === k + src ? ED.hist : (ED.hist = { k: k + src, atras: [], alante: [] });
-  let sel = ED.sel != null && ED.selK === k + src ? ED.sel : null; ED.selK = k + src;
-  let oyeCorte = null, selTexto = null;
-  const dur = () => (isFinite(video.duration) && video.duration > 0 ? video.duration : 0);
-  if (conPiezas && editable) asegurarPiezas();
-  function asegurarPiezas() {
-    if (!dur()) { video.addEventListener('loadedmetadata', () => { if (!ED.activo) return; if (asegurarPiezas2()) refrescar(); }, { once: true }); return; }
-    asegurarPiezas2();
-  }
-  function asegurarPiezas2() {
-    if (V.corte.piezas && V.corte.piezas.length) return false;
-    V.corte.piezas = [{ a: 0, b: +dur().toFixed(3), fuera: false }]; guardar(); return true;
-  }
-  const tMont = () => (conPiezas ? PZ.aMontaje(ps(), video.currentTime) : video.currentTime);
-  const totalM = () => (conPiezas && ps().length ? PZ.total(ps()) : dur());
-
-  // pantalla + controles
-  const ladoIzq = el('div'), pant = el('div', 'pantalla'); pant.appendChild(video); ladoIzq.appendChild(pant);
-  video.onclick = () => alternar();
-  const ctl = el('div', 'ctl');
-  const bPlay = boton('Reproducir (Espacio)', { cls: 'play', icono: 'play', al: () => alternar() });
-  const bMenos = boton('−5 s (←)', { cls: 'chico', al: () => saltar(-5) }), bMas = boton('+5 s (→)', { cls: 'chico', al: () => saltar(5) });
-  const tiempo = el('span', 'tiempo');
-  add(ctl, bPlay, bMenos, bMas, tiempo); ladoIzq.appendChild(ctl);
-
-  // herramientas (solo en el corte)
-  let bDiv, bQui, bRec, bDes, bReh, info;
-  if (conPiezas && editable) {
-    const herr = el('div', 'herr');
-    bDes = boton('Deshacer (⌘Z)', { cls: 'chico', icono: 'atras', al: deshacer }); bReh = boton('Rehacer (⇧⌘Z)', { cls: 'chico', icono: 'adelante', al: rehacer });
-    bDiv = boton('Dividir (B)', { cls: 'chico w-dividir', icono: 'dividir', al: () => dividirEn(video.currentTime) });
-    bQui = boton('Quitar (⌫)', { cls: 'chico', icono: 'quitar', al: () => quitar() }); bRec = boton('Recuperar (R)', { cls: 'chico', icono: 'recuperar', al: () => recuperar() });
-    info = el('span', 'info');
-    add(herr, bDes, bReh, el('span', 'sep'), bDiv, bQui, bRec, info); cont.appendChild(herr);
-  }
-  // línea de tiempo
-  const linea = el('div', 'linea'), pista = el('div', 'pista'), regla = el('div', 'regla'), canvas = el('canvas', 'onda'), capaP = el('div'), aguja = el('div', 'aguja');
-  add(pista, regla, canvas, capaP, aguja); linea.appendChild(pista);
-  const ayuda = el('p', 'ayuda-linea', conPiezas && editable ? 'Pulsa en la línea para ir a ese punto. Lo rayado está cortado: púlsalo y dale a reproducir para oírlo, o «Recuperar». Clic derecho sobre un trozo para ver sus opciones.' : 'Pulsa en la línea para ir a ese punto; los marcadores son tus notas con su minuto.');
-  let pps = 10;
-  function medir() {
-    const ancho = Math.max(300, linea.clientWidth - 24), d = dur() || 1;
-    pps = Math.max(ancho / d, 8); pista.style.width = Math.round(d * pps) + 'px'; pista.style.marginLeft = pista.style.marginRight = '12px';
-  }
-  function pintarRegla() {
-    regla.replaceChildren(); const d = dur(); if (!d) return;
-    const paso = [1, 2, 5, 10, 15, 30, 60, 120, 300].find((p) => p * pps >= 70) || 600;
-    for (let t = paso; t <= d + 0.01; t += paso) { const s = el('span', null, fmt(t)); s.style.left = (t * pps) + 'px'; regla.appendChild(s); }
-  }
-  ED.pintarOnda = pintarOnda;
-  function pintarOnda() {
-    const o = (V.ondas || {})[archivo], w = Math.max(1, Math.round(dur() * pps)), h = 96, dpr = window.devicePixelRatio || 1;
-    canvas.width = w * dpr; canvas.height = h * dpr; canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
-    const g = canvas.getContext('2d'); g.scale(dpr, dpr); g.clearRect(0, 0, w, h);
-    if (!o || !o.picos) return;
-    const cs = getComputedStyle(document.documentElement), cOn = cs.getPropertyValue('--onda').trim(), cOff = cs.getPropertyValue('--onda-fuera').trim();
-    const barra = 3, cada = Math.max(1, Math.round(barra / (o.paso * pps)));
-    for (let i = 0; i < o.picos.length; i += cada) {
-      const t = i * o.paso, x = t * pps; let m = 0; for (let j = i; j < i + cada && j < o.picos.length; j++) m = Math.max(m, o.picos[j]);
-      const fuera = conPiezas && ps().length ? (ps()[PZ.en(ps(), t)] || {}).fuera : false;
-      const alto = Math.max(2, (m / 100) * (h - 26)); g.fillStyle = fuera ? cOff : cOn; g.fillRect(x, h / 2 - alto / 2 + 6, Math.max(1, barra - 1), alto);
-    }
-  }
-  function pintarPiezas() {
-    capaP.replaceChildren();
-    if (!conPiezas || !ps().length) return;
-    ps().forEach((p, i) => {
-      const d = el('div', 'pieza' + (p.fuera ? ' fuera' : '') + (sel === i ? ' sel' : ''));
-      d.style.left = (p.a * pps) + 'px'; d.style.width = Math.max(2, (p.b - p.a) * pps) + 'px';
-      d.title = (p.fuera ? 'Cortado · ' : 'Se queda · ') + fmt(p.a) + '–' + fmt(p.b);
-      if ((p.b - p.a) * pps > 60) d.appendChild(el('span', 'et', (p.fuera ? 'cortado · ' : '') + ((p.b - p.a).toFixed(1).replace('.', ',')) + ' s'));
-      d.addEventListener('pointerdown', (e) => { if (e.button !== 0) return; e.stopPropagation(); elegir(i, e); });
-      if (editable) d.addEventListener('contextmenu', (e) => { e.preventDefault(); elegir(i, e); menuPieza(e, i); });
-      capaP.appendChild(d);
-    });
-  }
-  function pintarNotas() {
-    pista.querySelectorAll('.marca-nota').forEach((n) => n.remove());
-    fbDe(k, versionDe(k)).filter((x) => x.t != null).forEach((x) => {
-      const m = el('button', 'marca-nota'); m.type = 'button'; m.style.left = (x.t * pps) + 'px'; m.title = fmt(x.T) + ' · ' + x.texto; m.setAttribute('aria-label', 'Nota en ' + fmt(x.T));
-      m.addEventListener('pointerdown', (e) => { e.stopPropagation(); irNota(x); }); pista.appendChild(m);
-    });
-  }
-  ED.repintarNotas = pintarNotas;
-  function elegir(i, e) {
-    sel = i; ED.sel = i; const p = ps()[i];
-    const x = e && e.clientX != null ? (e.clientX - pista.getBoundingClientRect().left) / pps : p.a;
-    irA(Math.min(Math.max(x, p.a), p.b - 0.01)); pintarPiezas(); refrescarBarra();
-  }
-  pista.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0) return;
-    const x = (e.clientX - pista.getBoundingClientRect().left) / pps; sel = null; ED.sel = null;
-    irA(Math.max(0, Math.min(x, dur()))); pintarPiezas(); refrescarBarra();
-    const mover = (ev) => { const t = (ev.clientX - pista.getBoundingClientRect().left) / pps; irA(Math.max(0, Math.min(t, dur()))); };
-    const soltar = () => { window.removeEventListener('pointermove', mover); window.removeEventListener('pointerup', soltar); };
-    window.addEventListener('pointermove', mover); window.addEventListener('pointerup', soltar);
+// duración y tamaño de un vídeo, leídos del propio archivo (una vez por archivo)
+const METAS = new Map();
+function metaVideo(src) {
+  if (METAS.has(src)) return METAS.get(src);
+  const pr = new Promise((ok) => {
+    const v = document.createElement('video'); v.preload = 'metadata'; v.muted = true;
+    let hecho = false; const fin = (r) => { if (hecho) return; hecho = true; ok(r); v.removeAttribute('src'); v.load(); };
+    v.onloadedmetadata = () => fin(isFinite(v.duration) && v.duration > 0 ? { dur: v.duration, ancho: v.videoWidth, alto: v.videoHeight } : null);
+    v.onerror = () => fin(null); setTimeout(() => fin(null), 10000); v.src = src;
   });
-
-  // reproducción: se salta lo cortado (salvo que hayas pulsado en un trozo cortado para oírlo)
-  function irA(t) { pausa(); video.currentTime = t; oyeCorte = null; pintarAguja(); }
-  function irNota(x) { irA(x.t); }
-  function pausa() { video.pause(); }
-  ED.pausa = pausa;
-  function alternar() {
-    if (!video.paused) { video.pause(); return; }
-    if (conPiezas && ps().length) {
-      const i = PZ.en(ps(), video.currentTime);
-      if (i >= 0 && ps()[i].fuera) oyeCorte = i;
-      if (video.currentTime >= dur() - 0.05) video.currentTime = (ps().find((p) => !p.fuera) || { a: 0 }).a;
-    } else if (video.currentTime >= dur() - 0.05) video.currentTime = 0;
-    video.muted = false; video.play().catch(() => {});
-  }
-  function saltar(s) {
-    if (conPiezas && ps().length) { const T = Math.max(0, Math.min(totalM(), tMont() + s)); irA(PZ.deMontaje(ps(), T)); }
-    else irA(Math.max(0, Math.min(dur(), video.currentTime + s)));
-  }
-  function bucle() {
-    if (!ED.activo) return;
-    if (!video.paused && conPiezas && ps().length) {
-      const t = video.currentTime, i = PZ.en(ps(), t);
-      if (i >= 0 && ps()[i].fuera && oyeCorte !== i) {
-        const sig = ps().slice(i + 1).find((p) => !p.fuera);
-        if (sig) video.currentTime = sig.a; else { video.pause(); video.currentTime = ps()[i].a; }
-      } else if (oyeCorte != null && i !== oyeCorte) oyeCorte = null;
+  METAS.set(src, pr); pr.then((r) => { if (!r) METAS.delete(src); }); return pr;
+}
+// los huecos entre palabras de la transcripción (para acortar silencios si la persona lo tiene puesto en corte.silencio)
+function silenciosDe(ws, dur) {
+  const r = []; if (!ws || !ws.length) return r; let t = 0;
+  ws.forEach((w) => { if (w.a - t >= 0.2) r.push([+t.toFixed(2), +w.a.toFixed(2)]); t = Math.max(t, w.b); });
+  if (dur - t >= 0.2) r.push([+t.toFixed(2), +dur.toFixed(2)]);
+  return r;
+}
+// las piezas del corte en la forma del editor: [{id, f, a, b, t}] en el orden del montaje. Acepta la forma antigua
+// ({a, b, fuera} con todas las piezas de la grabación) y, si no hay ninguna, una sola pieza con toda la grabación.
+function piezasEditor(v, dur) {
+  const ps = Array.isArray(v.corte.piezas) ? v.corte.piezas : [], ws = (v.transcripcion && v.transcripcion.palabras) || [];
+  const texto = (a, b) => { const t = ws.filter((w) => (w.a + w.b) / 2 >= a && (w.a + w.b) / 2 < b).map((w) => w.p).join(' '); return t.length > 60 ? t.slice(0, 57) + '…' : t; };
+  if (ps.length && ps.every((p) => p && p.f && isFinite(p.a) && isFinite(p.b))) return ps.map((p, i) => ({ ...p, id: String(p.id || 'p' + (i + 1)), t: p.t || texto(p.a, p.b) }));
+  const quedan = ps.filter((p) => p && !p.fuera && isFinite(p.a) && isFinite(p.b) && p.b > p.a);
+  if (quedan.length) return quedan.map((p, i) => ({ id: 'p' + (i + 1), f: 'g', a: +(+p.a).toFixed(2), b: +(+p.b).toFixed(2), t: texto(p.a, p.b) }));
+  return [{ id: 'p1', f: 'g', a: 0, b: +dur.toFixed(2), t: texto(0, dur) }];
+}
+async function copiarTexto(t) {
+  window.__ultimoCopiado = t;
+  if (Array.isArray(window.__clip)) { window.__clip.push(t); return; }   // las pruebas no tocan el portapapeles de nadie
+  try { await navigator.clipboard.writeText(t); }
+  catch (e) { const ta = el('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+}
+// lo que manda el editor («Copiar a Claude» y «Dar por bueno»): se copia con la cabecera de la app y se deja en la carpeta
+async function enviarDesdeEditor(k, texto, tipo) {
+  const v = S.v, E = S.estado || {};
+  const t = cabeceraClaude(ETAPAS[IDX[k]].n).concat(['Las órdenes «node herramientas/…» se lanzan desde la carpeta de la app: ' + (E.carpeta || '') + '.', '', '']).join('\n') + texto;
+  await copiarTexto(t);
+  api('/api/videos/' + v.id + '/encargo/' + k, { method: 'POST', body: JSON.stringify({ texto: t }) }).catch(() => {});
+  if (tipo === 'bueno' && k === 'corte') {
+    if (IDX[v.etapa] <= IDX.corte) { v.etapa = 'edicion'; guardar(true); }
+    toast('Copiado: pégalo en tu Claude (⌘V). El vídeo pasa a Edición.', 4200); setTimeout(() => irEtapa('edicion'), 400);
+  } else if (tipo === 'bueno' && k === 'edicion') {
+    v.etapa = 'terminado'; guardar(true); toast('¡Lista! Copiado para tu Claude; el vídeo está en «Listos».', 4200);
+  } else toast('Copiado. Pégalo en tu Claude (⌘V): cuando termine, lo verás aquí solo.', 4200);
+  return true;
+}
+function panelEditor(k) {
+  const v = S.v, p = el('section', 'panel panel-editor');
+  const src = '/media/' + v.id + '/' + encodeURIComponent(v.corte.fuente);
+  const cargando = el('p', 'ayuda-linea', 'Abriendo el editor…'); p.appendChild(cargando);
+  (async () => {
+    const [{ mod }, meta] = await Promise.all([modulosEditor(), metaVideo(src)]);
+    if (!p.isConnected || S.v !== v) return;
+    const dur = (meta && meta.dur) || ((v.corte.piezas || []).reduce((m, x) => Math.max(m, +x.b || 0), 0)) || 0;
+    if (!dur) { cargando.textContent = 'No se ha podido leer la grabación (' + v.corte.fuente + '). Prueba a subirla otra vez.'; return; }
+    const ws = (v.transcripcion && v.transcripcion.palabras) || [], piezas = piezasEditor(v, dur);
+    const n = v.edicion.version, cn = v.corte.version, hay = (f) => f && v.archivos.some((a) => a.nombre === f);
+    const edV = hay(v.edicion.final) ? v.edicion.final : v.edicion.video;
+    const montado = k === 'edicion' ? (hay(edV) ? { url: '/media/' + v.id + '/' + edV.split('/').map(encodeURIComponent).join('/'), archivo: edV } : null)
+      : (hay('corte-v' + cn + '.mp4') ? { url: '/media/' + v.id + '/corte-v' + cn + '.mp4', archivo: 'corte-v' + cn + '.mp4' } : null);
+    const ctx = {
+      cid: v.id, titulo: v.titulo, carpeta: v.carpeta, modo: k === 'edicion' ? 'edicion' : 'corte', siempre: true, montado,
+      editor: {
+        fuentes: [{ id: 'g', nombre: v.corte.fuente, dur, ancho: meta && meta.ancho, alto: meta && meta.alto, ligera: src, silencios: silenciosDe(ws, dur),
+          onda: '/api/videos/' + v.id + '/editor/onda?f=' + encodeURIComponent(v.corte.fuente), palabras: '/api/videos/' + v.id + '/editor/palabras' }],
+        piezas, silencio: v.corte.silencio || null, version: cn || 0,
+        edicion: n ? { version: n, piezas: Array.isArray(v.edicion.piezas) ? v.edicion.piezas : null, sobre: v.edicion.sobre || cn } : null,
+        efectos: Array.isArray(v.edicion.efectos) ? v.edicion.efectos : []
+      },
+      aviso: (x) => toast(x), enviar: (texto, tipo) => enviarDesdeEditor(k, texto, tipo), irPaso: (x) => irEtapa(x), botonMic,
+      catalogoEjemplo: !(S.catalogo && S.catalogo.length),
+      guardarCatalogo: async (lista) => { try { const { status } = await api('/api/efectos', { method: 'PUT', body: JSON.stringify({ efectos: lista }) }); if (status !== 200) throw new Error(status); S.catalogo = lista; return true; } catch (e) { toast('No se ha podido guardar el catálogo: ' + e.message); return false; } }
+    };
+    const caja = mod.pintarEditor(p, ctx);
+    cargando.replaceWith(caja); ED.nuevo = caja;
+    if (k === 'corte') {
+      const otra = el('p', 'ayuda-linea'); otra.append('Grabación: ' + v.corte.fuente + ' · ');
+      const cam = el('button', 'volver', '¿Otra grabación? Súbela'); cam.style.margin = '0'; cam.addEventListener('click', () => { ED.desmontar(); p.replaceChildren(zonaSubir()); }); otra.appendChild(cam);
+      p.appendChild(otra);
     }
-    pintarAguja(); ED.raf = requestAnimationFrame(bucle);
-  }
-  let ultimoAncho = 0;
-  function pintarAguja() {
-    aguja.style.left = (video.currentTime * pps) + 'px';
-    tiempo.textContent = fmt(tMont()) + ' / ' + fmt(totalM());
-    const sonando = !video.paused; if (bPlay._s !== sonando) { bPlay._s = sonando; bPlay.replaceChildren(svg(sonando ? 'pausa' : 'play'), el('span', null, (sonando ? 'Pausa' : 'Reproducir') + ' (Espacio)')); }
-    if (sonando) { const x = video.currentTime * pps, l = linea.scrollLeft, w = linea.clientWidth; if (x < l + 20 || x > l + w - 40) linea.scrollLeft = x - 60; }
-    if (texto) marcarPalabra();
-    if (fbBox && fbBox._refrescarMinuto) fbBox._refrescarMinuto();
-    if (bDiv) refrescarDividir();
-    if (linea.clientWidth !== ultimoAncho && linea.clientWidth) { ultimoAncho = linea.clientWidth; refrescar(); }
-  }
-
-  // acciones del corte
-  function cambiar(nuevo) { hist.atras.push(JSON.stringify(ps())); hist.alante = []; V.corte.piezas = PZ.unir(nuevo); sel = null; ED.sel = null; guardar(); refrescar(); }
-  function dividirEn(t) { if (!editable || !ps().length) return; const i = PZ.en(ps(), t); if (i < 0) return; const p = ps()[i]; if (t <= p.a + 0.05 || t >= p.b - 0.05) return; hist.atras.push(JSON.stringify(ps())); hist.alante = []; V.corte.piezas = PZ.dividir(ps(), t); sel = PZ.en(ps(), t); ED.sel = sel; guardar(); refrescar(); }
-  function objetivo() { if (sel != null && ps()[sel]) return sel; const i = PZ.en(ps(), video.currentTime); return i >= 0 ? i : null; }
-  function quitar(i = objetivo()) { if (i == null || !editable) return; if (selTexto) return cortarTexto(true); const p = ps()[i]; if (p.fuera) return; cambiar(PZ.marcar(ps(), p.a, p.b, true)); toast('Trozo cortado. «Recuperar» (R) o ⌘Z lo devuelve.', 2200); }
-  function recuperar(i = objetivo()) { if (selTexto) return cortarTexto(false); if (i == null || !editable) return; const p = ps()[i]; if (!p.fuera) return; cambiar(PZ.marcar(ps(), p.a, p.b, false)); }
-  function deshacer() { if (!hist.atras.length) return; hist.alante.push(JSON.stringify(ps())); V.corte.piezas = JSON.parse(hist.atras.pop()); guardar(); refrescar(); }
-  function rehacer() { if (!hist.alante.length) return; hist.atras.push(JSON.stringify(ps())); V.corte.piezas = JSON.parse(hist.alante.pop()); guardar(); refrescar(); }
-  function refrescarDividir() {
-    const i = PZ.en(ps(), video.currentTime), p = ps()[i], dentro = !!p && video.currentTime > p.a + 0.05 && video.currentTime < p.b - 0.05;
-    bDiv.disabled = !dentro; const t = (dentro ? 'Dividir en ' + fmt(tMont()) : 'Dividir') + ' (B)'; if (bDiv._t !== t) { bDiv._t = t; bDiv.querySelector('span').textContent = t; }
-  }
-  function refrescarBarra() {
-    if (!bQui) return;
-    const i = objetivo(), p = i != null ? ps()[i] : null;
-    bQui.disabled = !(selTexto || (p && !p.fuera)); bRec.disabled = !(selTexto || (p && p.fuera));
-    bDes.disabled = !hist.atras.length; bReh.disabled = !hist.alante.length;
-    info.textContent = selTexto ? 'Texto elegido: ' + fmt(selTexto.a) + '–' + fmt(selTexto.b) : p ? (p.fuera ? 'Cortado · ' : 'Trozo · ') + ((p.b - p.a).toFixed(1).replace('.', ',')) + ' s' : '';
-  }
-  function menuPieza(e, i) {
-    const p = ps()[i];
-    abrirMenu(e, [
-      { t: 'Dividir aquí', k: 'B', i: 'dividir', dis: false, f: () => dividirEn((e.clientX - pista.getBoundingClientRect().left) / pps) },
-      { t: 'Quitar', k: '⌫', i: 'quitar', dis: p.fuera, f: () => quitar(i) },
-      { t: 'Recuperar', k: 'R', i: 'recuperar', dis: !p.fuera, f: () => recuperar(i) },
-      { t: 'Nota en este punto', k: 'M', i: 'nota', dis: false, f: () => { verLado('feedback'); setTimeout(() => fbBox && fbBox._nuevaNota(), 0); } }
-    ]);
-  }
-
-  // lado derecho: Texto (con lo cortado tachado) y Feedback
-  const ladoDer = el('div', 'lado');
-  let texto = null, fbBox = null, palabras = [];
-  const tabs = el('div', 'tabs');
-  const bTx = boton('Texto (T)', { cls: 'chico', al: () => verLado('texto') }), bFb = boton('Comentarios (F)', { cls: 'chico', al: () => verLado('feedback') });
-  if (conPiezas) tabs.appendChild(bTx); tabs.appendChild(bFb); ladoDer.appendChild(tabs);
-  const cajaTx = el('div'), cajaFb = el('div'); add(ladoDer, cajaTx, cajaFb);
-  function verLado(c) { if (!conPiezas) c = 'feedback'; S.lado = c; cajaTx.hidden = c !== 'texto'; cajaFb.hidden = c !== 'feedback'; bTx.classList.toggle('on', c === 'texto'); bFb.classList.toggle('on', c === 'feedback'); }
-  if (conPiezas) {
-    const tr = V.transcripcion;
-    palabras = tr && Array.isArray(tr.palabras) ? tr.palabras : [];
-    const barraSel = el('div', 'sel-barra');
-    const bCortaTx = boton('Cortar esto (X)', { cls: 'chico', icono: 'cortar', al: () => cortarTexto(true) }), bRecTx = boton('Recuperar esto (R)', { cls: 'chico', icono: 'recuperar', al: () => cortarTexto(false) });
-    const infoSel = el('span', 'info', palabras.length ? 'Selecciona palabras con el ratón para cortarlas o recuperarlas.' : '');
-    add(barraSel, bCortaTx, bRecTx, infoSel); bCortaTx.hidden = bRecTx.hidden = true;
-    texto = el('div', 'texto'); texto.setAttribute('aria-label', 'Texto de la grabación');
-    if (!palabras.length) {
-      const vac = el('div', 'vacio'); add(vac, el('b', null, 'Aún no hay texto'), el('p', null, V.corte.fuente ? 'Pulsa «Copiar a Claude»: transcribe tu grabación y te propone un primer corte. Mientras, puedes cortar en la línea de tiempo con Dividir (B) y Quitar (⌫).' : 'Primero sube tu grabación.'));
-      texto.appendChild(vac);
-      const gv = V.guion.version; if (gv && V.guiones[gv]) { texto.appendChild(el('p', 'etq', 'Tu guion v' + gv)); texto.appendChild(el('div', 'guion-ref', V.guiones[gv])); }
-    } else {
-      palabras.forEach((w, i) => { const s = el('span', 'w', w.p); s.dataset.i = i; texto.appendChild(s); texto.appendChild(document.createTextNode(' ')); });
-      texto.addEventListener('click', (e) => { const s = e.target.closest('.w'); if (!s || !getSelection().isCollapsed) return; irA(palabras[+s.dataset.i].a + 0.01); });
-      texto.addEventListener('mouseup', () => setTimeout(leerSeleccion, 0));
-      texto.addEventListener('keyup', () => setTimeout(leerSeleccion, 0));
-    }
-    function leerSeleccion() {
-      const s = getSelection(); selTexto = null;
-      if (s && !s.isCollapsed && texto.contains(s.anchorNode)) {
-        const r = s.getRangeAt(0), ws = [...texto.querySelectorAll('.w')].filter((w) => r.intersectsNode(w));
-        if (ws.length) { const a = palabras[+ws[0].dataset.i], b = palabras[+ws[ws.length - 1].dataset.i]; selTexto = { a: a.a, b: b.b }; }
-      }
-      bCortaTx.hidden = bRecTx.hidden = !selTexto || !editable; infoSel.textContent = selTexto ? fmt(PZ.aMontaje(ps(), selTexto.a)) + ' · ' + ((selTexto.b - selTexto.a).toFixed(1).replace('.', ',')) + ' s elegidos' : (palabras.length ? 'Selecciona palabras con el ratón para cortarlas o recuperarlas.' : '');
-      refrescarBarra();
-    }
-    ED.limpiarSel = () => { selTexto = null; getSelection().removeAllRanges(); leerSeleccion(); };
-    add(cajaTx, barraSel, texto);
-  }
-  function cortarTexto(fuera) {
-    if (!selTexto || !editable) return; const { a, b } = selTexto; selTexto = null; getSelection().removeAllRanges();
-    cambiar(PZ.marcar(ps(), Math.max(0, a - 0.02), Math.min(dur() || b, b + 0.02), fuera));
-  }
-  function pintarTexto() {
-    if (!texto || !palabras.length) return;
-    texto.querySelectorAll('.w').forEach((s) => { const w = palabras[+s.dataset.i], m = (w.a + w.b) / 2, i = PZ.en(ps(), m); s.classList.toggle('fuera', i >= 0 && ps()[i].fuera); });
-  }
-  let palAct = -1;
-  function marcarPalabra() {
-    if (!palabras.length) return; const t = video.currentTime; let i = palabras.findIndex((w) => t >= w.a && t < w.b);
-    if (i === palAct) return; const viejo = texto.querySelector('.w.ya'); if (viejo) viejo.classList.remove('ya');
-    palAct = i; if (i >= 0) { const s = texto.querySelector('.w[data-i="' + i + '"]'); if (s) { s.classList.add('ya'); if (!video.paused) { const r = s.getBoundingClientRect(), R = texto.getBoundingClientRect(); if (r.top < R.top || r.bottom > R.bottom) texto.scrollTop += r.top - R.top - 60; } } }
-  }
-  fbBox = feedback(k, { conMinuto: true, tiempo: () => ({ t: video.currentTime, T: tMont() }), ir: irNota });
-  cajaFb.appendChild(fbBox);
-  verLado(conPiezas ? (S.lado || 'texto') : 'feedback');
-
-  const ed = el('div', 'editor'); add(ed, ladoIzq, ladoDer);
-  cont.prepend(ed); add(cont, linea, ayuda);
-  function refrescar() { medir(); pintarRegla(); pintarOnda(); pintarPiezas(); pintarNotas(); pintarTexto(); refrescarBarra(); pintarAguja(); if (k === 'corte') { const m = document.querySelector('.panel-cab .meta'); if (m) m.textContent = metaCorte(); } }
-  video.addEventListener('loadedmetadata', () => { if (ED.activo) refrescar(); });
-  requestAnimationFrame(() => { refrescar(); ED.raf = requestAnimationFrame(bucle); });
-
-  // atajos del editor (los recoge el manejador global)
-  ED.acc = {
-    ' ': alternar, ArrowLeft: () => saltar(-5), ArrowRight: () => saltar(5),
-    b: () => dividirEn(video.currentTime), Backspace: () => quitar(), Delete: () => quitar(), r: () => recuperar(), x: () => cortarTexto(true),
-    m: () => { verLado('feedback'); fbBox._nuevaNota(); }, t: () => verLado('texto'), f: () => verLado('feedback'),
-    deshacer, rehacer
-  };
-  return cont;
+  })().catch((e) => { cargando.textContent = 'No se ha podido abrir el editor: ' + e.message; });
+  return p;
 }
 
 // CORTE
-function metaCorte() {
-  const v = S.v, n = v.corte.version, fbN = fbDe('corte', n).length, k = v.corte.piezas.filter((x) => !x.fuera).length;
-  return !v.corte.fuente ? 'Falta la grabación' : (n ? 'v' + n + ' · ' : '') + (v.corte.piezas.length ? 'queda en ' + fmt(PZ.total(v.corte.piezas)) + ' de ' + fmt(v.corte.piezas[v.corte.piezas.length - 1].b) + ' · ' + k + (k === 1 ? ' trozo' : ' trozos') : 'sin cortar') + (fbN ? ' · ' + fbN + ' comentario' + (fbN > 1 ? 's' : '') : '');
-}
 function panelCorte() {
-  const v = S.v, p = el('section', 'panel');
-  add(p, add(el('div', 'panel-cab'), add(el('h2'), 'Corte'), el('span', 'meta', metaCorte()), botonesCab('corte', { copiable: !!v.corte.fuente, motivo: v.corte.fuente ? '' : 'Primero sube tu grabación' })));
-  if (!v.corte.fuente) { p.appendChild(zonaSubir()); return p; }
-  p.appendChild(crearEditor({ k: 'corte', src: '/media/' + v.id + '/' + encodeURIComponent(v.corte.fuente), archivo: v.corte.fuente, conPiezas: true, editable: true }));
-  const otra = el('p', 'ayuda-linea'); otra.append('Grabación: ' + v.corte.fuente + ' · ');
-  const cam = el('button', 'volver', '¿Otra grabación? Súbela'); cam.style.margin = '0'; cam.addEventListener('click', () => { p.replaceChildren(p.firstChild, zonaSubir()); ED.desmontar(); }); otra.appendChild(cam);
-  p.appendChild(otra);
+  const v = S.v;
+  if (v.corte.fuente) return panelEditor('corte');
+  const p = el('section', 'panel');
+  add(p, add(el('div', 'panel-cab'), add(el('h2'), 'Corte'), el('span', 'meta', 'Falta la grabación'), botonesCab('corte', { copiable: false, motivo: 'Primero sube tu grabación' })));
+  p.appendChild(zonaSubir());
   return p;
 }
 function zonaSubir() {
@@ -670,7 +483,7 @@ function zonaSubir() {
     prog.hidden = false; const x = new XMLHttpRequest();
     x.open('POST', '/api/videos/' + S.v.id + '/subir?nombre=' + encodeURIComponent(file.name.replace(/[^\w.\-]+/g, '-')));
     x.upload.onprogress = (e) => { if (e.lengthComputable) barra.style.width = Math.round((e.loaded / e.total) * 100) + '%'; };
-    x.onload = () => { if (x.status !== 200) { toast('No se ha podido subir: ' + (JSON.parse(x.responseText || '{}').error || x.status)); prog.hidden = true; return; } S.v = JSON.parse(x.responseText); S.firma = S.v.firma; ED.hist = null; toast('Grabación subida. Ahora «Copiar a Claude» para que la transcriba y proponga el corte.', 4200); pintar(); };
+    x.onload = () => { if (x.status !== 200) { toast('No se ha podido subir: ' + (JSON.parse(x.responseText || '{}').error || x.status)); prog.hidden = true; return; } S.v = JSON.parse(x.responseText); S.firma = S.v.firma; toast('Grabación subida. Ahora «Copiar a Claude» para que la transcriba y proponga el corte.', 4200); pintar(); };
     x.onerror = () => { toast('No se ha podido subir.'); prog.hidden = true; };
     x.send(file);
   };
@@ -684,21 +497,11 @@ function zonaSubir() {
 
 // EDICIÓN
 function panelEdicion() {
-  const v = S.v, p = el('section', 'panel'), n = v.edicion.version, ver = S.verV.edicion || n, fbN = fbDe('edicion', n).length;
-  add(p, add(el('div', 'panel-cab'), add(el('h2'), 'Edición'), el('span', 'meta', n ? 'v' + n + (fbN ? ' · ' + fbN + ' comentario' + (fbN > 1 ? 's' : '') : '') : 'Aún sin edición'), botonesCab('edicion', { copiable: !!v.corte.fuente, motivo: v.corte.fuente ? '' : 'Primero tiene que haber una grabación en Corte' })));
-  if (!n) {
-    const vac = el('div', 'vacio');
-    add(vac, el('b', null, 'Aún no hay edición'), el('p', null, v.corte.fuente ? 'Pulsa «Copiar a Claude» y pégalo en tu Claude: monta tu corte y te prepara la edición v1. Si ya sabes qué quieres (subtítulos, música, textos en pantalla), déjalo en comentarios antes de copiar.' : 'Primero sube tu grabación en la etapa Corte.'));
-    p.appendChild(vac);
-    if (v.corte.fuente) { const lado = el('div', 'lado'); lado.style.marginTop = '14px'; lado.appendChild(feedback('edicion', { conMinuto: false })); p.appendChild(lado); }
-    return p;
-  }
-  const vs = el('div', 'versiones'); vs.appendChild(el('span', 'etq', 'Versiones'));
-  for (let x = 1; x <= n; x++) { const nom = x === n ? v.edicion.video : 'edicion-v' + x + '.mp4'; if (x !== n && !v.archivos.some((a) => a.nombre === nom)) continue; vs.appendChild(boton('v' + x, { cls: 'chico' + (x === ver ? ' on' : ''), al: () => { S.verV.edicion = x; pintar(); } })); }
-  if (ver !== n) vs.appendChild(el('span', 'meta', 'Estás viendo una versión anterior; los comentarios van a la v' + n));
-  p.appendChild(vs);
-  const archivo = ver === n ? v.edicion.video : 'edicion-v' + ver + '.mp4';
-  p.appendChild(crearEditor({ k: 'edicion', src: '/media/' + v.id + '/' + encodeURIComponent(archivo), archivo, conPiezas: false, editable: false }));
+  const v = S.v;
+  if (v.corte.fuente) return panelEditor('edicion');
+  const p = el('section', 'panel');
+  add(p, add(el('div', 'panel-cab'), add(el('h2'), 'Edición'), el('span', 'meta', 'Aún sin edición'), botonesCab('edicion', { copiable: false, motivo: 'Primero tiene que haber una grabación en Corte' })));
+  const vac = el('div', 'vacio'); add(vac, el('b', null, 'Aún no hay grabación'), el('p', null, 'Primero sube tu grabación en la etapa Corte.')); p.appendChild(vac);
   return p;
 }
 
@@ -738,43 +541,14 @@ function textoClaude(k) {
     if (fb.length) L.push(...fb, ''); else L.push('No he dejado comentarios: mejóralo tú con lo que sabes de cómo me gustan.', '');
     L.push('Guárdalo en guion-v' + (n + 1) + '.md (no borres las versiones anteriores) y en video.json pon "guion": {"version": ' + (n + 1) + '}.',
       'Cuando acabes, dime en una línea qué has cambiado.');
-  } else if (k === 'corte') {
-    const n = v.corte.version, ps = v.corte.piezas || [], tieneTx = !!(v.transcripcion && v.transcripcion.palabras && v.transcripcion.palabras.length);
-    const fb = bloqueFb('corte', n, 'MIS COMENTARIOS SOBRE EL CORTE' + (n ? ' V' + n : '') + ':');
-    const aMano = ps.some((p) => p.fuera);
-    L.push('QUÉ QUIERO: el corte v' + (n + 1) + ' de mi grabación (' + v.corte.fuente + ').');
-    if (!tieneTx) L.push('1. Transcríbela con el tiempo de cada palabra y guárdala en transcripcion.json (cómo, en el CLAUDE.md).');
-    L.push((tieneTx ? '1' : '2') + '. ' + (n ? 'Ajusta el corte con mis comentarios.' : 'Propón el corte: quita silencios largos, arranques en falso y tomas repetidas (de lo repetido, la última toma bien dicha), sin cortar palabras.'),
-      (tieneTx ? '2' : '3') + '. Escríbelo en video.json, en "corte": {"piezas": [...], "version": ' + (n + 1) + '}, con todas las piezas de la grabación en orden (las que se quitan, con "fuera": true).');
-    if (aMano) {
-      L.push('', 'CÓMO LO HE DEJADO YO (respétalo: lo he decidido a mano). Queda en ' + fmt(PZ.total(ps)) + ' de ' + fmt(ps[ps.length - 1].b) + ':');
-      const pal = tieneTx ? v.transcripcion.palabras : [];
-      ps.forEach((p) => { const txt = pal.filter((w) => (w.a + w.b) / 2 >= p.a && (w.a + w.b) / 2 < p.b).map((w) => w.p).join(' '); L.push('- ' + p.a.toFixed(2) + '–' + p.b.toFixed(2) + ' s ' + (p.fuera ? 'FUERA' : 'se queda') + (txt ? ' · «' + (txt.length > 90 ? txt.slice(0, 87) + '…' : txt) + '»' : '')); });
-    }
-    if (fb.length) L.push('', ...fb);
-    L.push('', 'Cuando acabes, dime en una línea qué has cortado.');
-  } else if (k === 'edicion') {
-    const n = v.edicion.version, fb = bloqueFb('edicion', n, n ? 'MIS COMENTARIOS SOBRE LA EDICIÓN V' + n + ':' : 'LO QUE QUIERO EN LA EDICIÓN:');
-    if (!n) {
-      L.push('QUÉ QUIERO: la edición v1.', '1. Monta mi corte: las piezas de video.json → corte.piezas que no están "fuera", en orden, de ' + v.corte.fuente + ' (receta en el CLAUDE.md).',
-        '2. Edítalo como me gustan mis vídeos (lo sabe mi cerebro; si no, pregúntame antes de inventar): formato vertical para redes, subtítulos y lo que haga falta.',
-        '3. Guárdalo como edicion-v1.mp4 en la carpeta del vídeo y en video.json pon "edicion": {"version": 1, "video": "edicion-v1.mp4"} y "etapa": "edicion".');
-    } else {
-      L.push('QUÉ QUIERO: la edición v' + (n + 1) + ', a partir de la v' + n + ' (' + v.edicion.video + ').',
-        'Guárdala como edicion-v' + (n + 1) + '.mp4 (no borres las anteriores) y en video.json pon "edicion": {"version": ' + (n + 1) + ', "video": "edicion-v' + (n + 1) + '.mp4"}.');
-    }
-    if (fb.length) L.push('', ...fb);
-    L.push('', 'Cuando acabes, dime en una línea qué has hecho.');
   }
   return L.join('\n');
 }
 async function copiarAClaude(k) {
   const b = document.getElementById('b-copiar'); if (b && b.disabled) return;
   if (S.pendiente) await guardarYa();
-  const t = textoClaude(k);
-  try { await navigator.clipboard.writeText(t); }
-  catch (e) { const ta = el('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
-  window.__ultimoCopiado = t;
+  const t = textoClaude(k); await copiarTexto(t);
+  api('/api/videos/' + S.v.id + '/encargo/' + k, { method: 'POST', body: JSON.stringify({ texto: t }) }).catch(() => {});
   toast('Copiado. Pégalo en tu Claude (⌘V): cuando termine, lo verás aquí solo.', 4200);
 }
 
@@ -791,8 +565,7 @@ function cerrarMenu() { document.querySelectorAll('.menu').forEach((m) => m.remo
 const ATAJOS = [
   ['Tablero', [['Nueva idea', 'N'], ['Volver al tablero', 'Esc']]],
   ['Cualquier etapa', [['Copiar a Claude', '⇧⌘E'], ['Pasar a la etapa siguiente / Dar por buena', '⌘↵'], ['Ir a Idea, Guion, Corte o Edición', '1 · 2 · 3 · 4'], ['Dictar (micrófono abierto)', '⌥D'], ['Guardar un comentario', 'Enter']]],
-  ['Corte y Edición', [['Reproducir o pausar', 'Espacio'], ['5 s atrás / adelante', '← →'], ['Nota con su minuto', 'M'], ['Pantalla completa', 'P'], ['Pestaña Texto / Comentarios', 'T · F']]],
-  ['Solo Corte', [['Dividir en la aguja', 'B'], ['Quitar el trozo', '⌫'], ['Recuperar el trozo', 'R'], ['Cortar el texto elegido', 'X'], ['Subir otra grabación', 'U'], ['Deshacer / Rehacer', '⌘Z · ⇧⌘Z']]]
+  ['Corte y Edición', [['Todos los atajos del editor', '? (dentro del editor)'], ['Reproducir o pausar', 'Espacio'], ['Nota con su minuto', 'M'], ['Dividir · Quitar · Recuperar', 'B · ⌫ · R'], ['Recuperar desde / hasta la aguja', 'D · H'], ['Imán · Ver lo quitado', 'N · V'], ['Pantalla completa', 'P']]]
 ];
 function verAtajos() {
   if (document.querySelector('.capa')) { document.querySelector('.capa').remove(); return; }
@@ -803,18 +576,19 @@ function verAtajos() {
   c.appendChild(w); c.addEventListener('click', (e) => { if (e.target === c) c.remove(); }); document.body.appendChild(c);
 }
 document.getElementById('b-atajos').addEventListener('click', verAtajos);
-function alternarCompleta() { S.completa = !document.body.classList.contains('completa'); document.body.classList.toggle('completa', S.completa); requestAnimationFrame(() => window.dispatchEvent(new Event('resize'))); }
 function salirCompleta() { document.body.classList.remove('completa'); }
 
+const conEditor = () => !!(ED.nuevo && ED.nuevo.isConnected);
 document.addEventListener('keydown', (e) => {
   const cmd = e.metaKey || e.ctrlKey, tecla = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-  if (e.altKey && e.code === 'KeyD') { e.preventDefault(); const a = document.activeElement; const ta = a && a.tagName === 'TEXTAREA' ? a : (DIC.ta || document.getElementById('fb-general') || document.getElementById('texto-principal')); if (ta && ta._mic) dictar(ta, ta._mic); else if (ta) dictar(ta, null); return; }
+  if (e.altKey && e.code === 'KeyD') { e.preventDefault(); const a = document.activeElement; const ta = a && a.tagName === 'TEXTAREA' ? a : (DIC.ta || document.getElementById('fb-general') || document.getElementById('texto-principal') || document.querySelector('.x-lm-fb-nuevo:not([hidden])')); if (ta && ta._mic) dictar(ta, ta._mic); else if (ta) dictar(ta, null); return; }
+  if (e.key === 'Escape' && document.querySelector('.capa')) { document.querySelector('.capa').remove(); return; }
+  if (e.key === 'Escape' && document.querySelector('.menu')) { cerrarMenu(); return; }
+  // con el editor abierto, las teclas son suyas (las de las clases: en Edición los números ponen efectos; T y E cambian de etapa)
+  if (conEditor()) return;
   if (cmd && e.shiftKey && tecla === 'e') { if (S.ruta.vista === 'video') { e.preventDefault(); copiarAClaude(S.ruta.etapa); } return; }
   if (cmd && e.key === 'Enter') { if (S.ruta.vista === 'video' && !(e.target.closest && e.target.closest('.nueva'))) { e.preventDefault(); avanzar(); } return; }
   if (e.key === 'Escape') {
-    if (document.querySelector('.capa')) { document.querySelector('.capa').remove(); return; }
-    if (document.querySelector('.menu')) { cerrarMenu(); return; }
-    if (document.body.classList.contains('completa')) { salirCompleta(); return; }
     if (escribiendo()) { document.activeElement.blur(); return; }
     if (S.ruta.vista === 'video') location.hash = '#/';
     return;
@@ -823,13 +597,7 @@ document.addEventListener('keydown', (e) => {
   if (tecla === '?') { verAtajos(); return; }
   if (S.ruta.vista === 'tablero') { if (tecla === 'n' && !cmd) { e.preventDefault(); S.nueva = true; pintar(); } return; }
   if (!cmd && /^[1-4]$/.test(tecla)) { irEtapa(ETAPAS[+tecla - 1].k); return; }
-  if (!cmd && tecla === 'p' && (S.ruta.etapa === 'corte' || S.ruta.etapa === 'edicion') && ED.acc) { alternarCompleta(); return; }
   if (!cmd && tecla === 'u' && S.ruta.etapa === 'corte' && ED.subir) { e.preventDefault(); ED.subir(); return; }
-  const A = ED.acc; if (!A) return;
-  if (cmd && tecla === 'z') { e.preventDefault(); if (S.ruta.etapa === 'corte') (e.shiftKey ? A.rehacer : A.deshacer)(); return; }
-  if (cmd || e.altKey) return;
-  const f = A[tecla] || A[e.key];
-  if (f && (S.ruta.etapa === 'corte' || ['m', 'f', ' ', 'ArrowLeft', 'ArrowRight'].includes(tecla) || ['ArrowLeft', 'ArrowRight'].includes(e.key))) { e.preventDefault(); f(); }
 });
 
 // ── arranque ────────────────────────────────────────────────────────────────────────────────
