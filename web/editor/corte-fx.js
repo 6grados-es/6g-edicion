@@ -1,5 +1,5 @@
 // Panel de EFECTOS del paso Edición (app de edición de 6 Grados; traído del editor de las clases de 6 Grados).
-// Los efectos NO vienen fijos: salen del catálogo de cada persona (datos/efectos.json), cada uno con su emoji, su nombre, «cómo se hace»
+// Los efectos NO vienen fijos: salen del catálogo de cada persona (datos/efectos.json), cada uno con su icono plano, su nombre, «cómo se hace»
 // (lo que lee su Claude para hacerlo) y un ASPECTO para la vista previa (VISTAS). La persona añade, cambia o quita efectos del catálogo.
 // Cada efecto puesto en un vídeo es { id, tipo, f, a, b, x, y, w, h, de }: tipo = id del efecto en el catálogo, f = grabación, a–b = segundos
 // de la grabación ORIGINAL (así sobrevive a recortes y cambios de orden), caja en fracciones 0–1 del fotograma.
@@ -10,7 +10,7 @@
 
 // Los aspectos que sabe pintar la vista previa (el vídeo final lo hace Claude según «cómo se hace»).
 export const VISTAS = {
-  zona: { n: "Caja con su emoji", que: "marca la zona con el emoji y el nombre del efecto", dur: 2.5 },
+  zona: { n: "Caja con su nombre", que: "marca la zona con el nombre del efecto", dur: 2.5 },
   texto: { n: "Texto en pantalla", que: "un texto encima del vídeo", dur: 2.5 },
   emoji: { n: "Emoji grande", que: "el emoji entra con un pequeño salto", dur: 1.5 },
   zoom: { n: "Zoom", que: "acerca la imagen a esa zona", dur: 2 },
@@ -23,17 +23,17 @@ export const VISTAS = {
 };
 // El catálogo de ejemplo cuando la persona aún no tiene el suyo: herramientas neutras, sin estilo de nadie.
 export const EJEMPLO = [
-  { id: "zoom", emoji: "🔍", nombre: "Zoom", vista: "zoom", dur: 2, como: "Acerca la imagen a la zona marcada, entrando y saliendo suave (unos 0,4 s), sin salirse del fotograma." },
-  { id: "texto", emoji: "💬", nombre: "Texto en pantalla", vista: "texto", dur: 2.5, como: "Escribe el texto del efecto encima del vídeo, dentro de la caja marcada, legible en el móvil." },
-  { id: "recuadro", emoji: "🟥", nombre: "Recuadro", vista: "caja", dur: 2.5, como: "Marco alrededor de la zona marcada y el resto del fotograma un poco más oscuro." },
-  { id: "desenfoque", emoji: "🌫️", nombre: "Desenfoque", vista: "blur", dur: 3, como: "Desenfoca la zona marcada (un dato que no se debe ver) mientras esté en pantalla." },
-  { id: "clic", emoji: "👆", nombre: "Clic", vista: "clic", dur: .6, como: "Onda que se abre en el punto marcado y, a la vez, sonido de clic." },
-  { id: "emoji", emoji: "✨", nombre: "Emoji", vista: "emoji", dur: 1.5, como: "El emoji del efecto, grande, en la caja marcada, entrando con un pequeño salto." },
+  { id: "zoom", icono: "zoom", nombre: "Zoom", vista: "zoom", dur: 2, como: "Acerca la imagen a la zona marcada, entrando y saliendo suave (unos 0,4 s), sin salirse del fotograma." },
+  { id: "texto", icono: "texto", nombre: "Texto en pantalla", vista: "texto", dur: 2.5, como: "Escribe el texto del efecto encima del vídeo, dentro de la caja marcada, legible en el móvil." },
+  { id: "recuadro", icono: "caja", nombre: "Recuadro", vista: "caja", dur: 2.5, como: "Marco alrededor de la zona marcada y el resto del fotograma un poco más oscuro." },
+  { id: "desenfoque", icono: "blur", nombre: "Desenfoque", vista: "blur", dur: 3, como: "Desenfoca la zona marcada (un dato que no se debe ver) mientras esté en pantalla." },
+  { id: "clic", icono: "clic", nombre: "Clic", vista: "clic", dur: .6, como: "Onda que se abre en el punto marcado y, a la vez, sonido de clic." },
+  { id: "emoji", icono: "estrella", emoji: "✨", nombre: "Emoji", vista: "emoji", dur: 1.5, como: "El emoji del efecto, grande, en la caja marcada, entrando con un pequeño salto." },
 ];
-// TIPOS: los efectos del catálogo, con la forma que usa el editor (n nombre, k tecla, dur, pista, que, emoji, vista, como).
+// TIPOS: los efectos del catálogo, con la forma que usa el editor (n nombre, k tecla, dur, pista, que, icono, emoji, vista, como).
 // Un efecto puesto en un vídeo cuyo tipo ya no está en el catálogo se sigue viendo como caja con su nombre.
 const CAT = {};
-const suelto = (id) => ({ n: String(id), k: "", dur: 2.5, pista: "visual", que: "efecto que ya no está en el catálogo", emoji: "✨", vista: "zona", como: "" });
+const suelto = (id) => ({ n: String(id), k: "", dur: 2.5, pista: "visual", que: "efecto que ya no está en el catálogo", icono: "estrella", emoji: "✨", vista: "zona", como: "" });
 export const TIPOS = new Proxy(CAT, { get: (o, k) => (typeof k !== "string" || k in o || k === "then" || k === "toJSON" ? o[k] : suelto(k)) });
 export const V = (e) => TIPOS[e.tipo].vista, VT = (t) => TIPOS[t].vista;
 const escE = (t) => String(t == null ? "" : t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -44,16 +44,16 @@ export function limpiarCatalogo(l) {
     let id = String(x.id || "").trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "efecto-" + (i + 1);
     while (vistos.has(id)) id += "-b"; vistos.add(id);
     const vista = VISTAS[x.vista] ? x.vista : "zona", dur = +x.dur > 0 && +x.dur <= 60 ? Math.round(+x.dur * 10) / 10 : VISTAS[vista].dur;
-    return { id, emoji: String(x.emoji || "✨").trim().slice(0, 8) || "✨", nombre: String(x.nombre).trim().slice(0, 40), vista, dur, como: String(x.como || "").trim().slice(0, 2000) };
+    const icono = ICONOS[x.icono] ? x.icono : ICONO_VISTA[vista] || "estrella";
+    return { id, icono, ...(vista === "emoji" ? { emoji: String(x.emoji || "✨").trim().slice(0, 8) || "✨" } : {}), nombre: String(x.nombre).trim().slice(0, 40), vista, dur, como: String(x.como || "").trim().slice(0, 2000) };
   }).filter(Boolean);
 }
 export function ponerCatalogo(l) {
   Object.keys(CAT).forEach((k) => delete CAT[k]);
   limpiarCatalogo(l).forEach((x, i) => {
-    CAT[x.id] = { n: x.nombre, k: i < 9 ? String(i + 1) : "", dur: x.dur, pista: VISTAS[x.vista].pista || "visual", que: x.como || VISTAS[x.vista].que, emoji: x.emoji, vista: x.vista, como: x.como };
+    CAT[x.id] = { n: x.nombre, k: i < 9 ? String(i + 1) : "", dur: x.dur, pista: VISTAS[x.vista].pista || "visual", que: x.como || VISTAS[x.vista].que, icono: x.icono, emoji: x.emoji || "✨", vista: x.vista, como: x.como };
   });
 }
-ponerCatalogo(EJEMPLO);
 export const FLECHA_TXT = "Mira aquí";
 const ico = (d) => '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + d + "</svg>";
 export const ICO_FX = {
@@ -73,21 +73,33 @@ export const ICO_FX = {
   video: ico('<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/>'),
   papelera: ico('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>'),
 };
-export const icoDe = (tipo) => '<span class="x-fx-emo" aria-hidden="true">' + escE(TIPOS[tipo].emoji) + "</span>";
+// Los iconos que puede llevar un efecto del catálogo: planos, de línea, como los de la app de clases.
+export const ICONOS = {
+  zoom: ["Zoom", ICO_FX.zoom], texto: ["Texto", ico('<path d="M5 7V4h14v3M12 4v16M9 20h6"/>')], caja: ["Recuadro", ICO_FX.caja],
+  blur: ["Desenfoque", ICO_FX.blur], clic: ["Clic", ICO_FX.clic], estrella: ["Destello", ico('<path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/><path d="M19 3v4M17 5h4"/>')],
+  flecha: ["Flecha", ICO_FX.flecha], lupa: ["Lupa", ICO_FX.lupa], raya: ["Subrayado", ICO_FX.raya], imagen: ["Imagen", ICO_FX.imagen],
+  sonido: ["Sonido", ICO_FX.sonido], musica: ["Música", ico('<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>')],
+  corazon: ["Corazón", ico('<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>')],
+  check: ["Hecho", ico('<circle cx="12" cy="12" r="8.5"/><path d="M8 12.5l2.7 2.7L16 10"/>')],
+  comentar: ["Bocadillo", ICO_FX.comentar], video: ["Vídeo", ICO_FX.video],
+};
+const ICONO_VISTA = { zona: "estrella", texto: "texto", emoji: "estrella", zoom: "zoom", caja: "caja", raya: "raya", blur: "blur", clic: "clic", lupa: "lupa", flecha: "flecha" };
+export const icoDe = (tipo) => '<span class="x-fx-emo" aria-hidden="true">' + (ICONOS[TIPOS[tipo].icono] || ICONOS.estrella)[1] + "</span>";
+ponerCatalogo(EJEMPLO);
 const FLECHA_SVG = '<svg viewBox="0 0 40 50" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="M14 2h12v24h10L20 48 4 26h10z" fill="#DC0A06" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg>';
 const r3 = (x) => Math.round(x * 1000) / 1000, r2 = (x) => Math.round(x * 100) / 100;
 const lim = (x, a, b) => Math.max(a, Math.min(b, x));
 const suave = (p) => { p = lim(p, 0, 1); return p * p * (3 - 2 * p); };
 // lo que lleva de más cada efecto, en palabras (para el texto de Claude)
 const extra = (e) => (V(e) === "texto" || V(e) === "flecha" ? " · texto «" + (e.texto || "") + "»" : V(e) === "caja" && e.num ? " · número " + e.num : "");
-const nomE = (e) => TIPOS[e.tipo].emoji + " " + TIPOS[e.tipo].n.toUpperCase() + " (" + e.tipo + ")";
+const nomE = (e) => TIPOS[e.tipo].n.toUpperCase() + " (" + e.tipo + ")";
 
 // Texto del bloque EFECTOS del encargo. dims(f) da el tamaño en píxeles de la grabación; enCorte(e) = [desde, hasta] en el vídeo cortado.
 export function textoFx(fx, nombreF, dims, enCorte) {
   if (!fx.length) return "";
   const orden = fx.slice().sort((p, q) => (p.f === q.f ? p.a - q.a : String(p.f).localeCompare(String(q.f))));
   const usados = [...new Set(orden.map((e) => e.tipo))];
-  return "CÓMO SE HACE CADA EFECTO (de mi catálogo, datos/efectos.json):\n" + usados.map((t) => "- " + TIPOS[t].emoji + " " + TIPOS[t].n + " (" + t + "): " + (TIPOS[t].como || "(sin descripción: hazlo como lo entiendas y apúntalo en el catálogo)")).join("\n") +
+  return "CÓMO SE HACE CADA EFECTO (de mi catálogo, datos/efectos.json):\n" + usados.map((t) => "- " + TIPOS[t].n + " (" + t + "): " + (TIPOS[t].como || "(sin descripción: hazlo como lo entiendas y apúntalo en el catálogo)")).join("\n") +
     "\n\nEFECTOS (tiempos en segundos de la grabación ORIGINAL y, entre paréntesis, en el vídeo ya cortado; caja x, y, ancho, alto en fracciones 0–1 del fotograma y, si se sabe, en píxeles):\n" +
     orden.map((e) => {
       const d = dims && dims(e.f), px = d ? " · px " + Math.round(e.x * d.w) + "," + Math.round(e.y * d.h) + "," + Math.round(e.w * d.w) + "," + Math.round(e.h * d.h) + " de " + d.w + "×" + d.h : "";
@@ -101,7 +113,7 @@ export function cambiosFx(semilla, fx, nombreF) {
   const caja = (e) => [e.x, e.y, e.w, e.h].map(r3).join(", ");
   const k = (e) => [e.tipo, e.f, r2(e.a), r2(e.b), caja(e), extra(e)].join("|");
   const S = new Map(semilla.map((e) => [e.id, e])), A = new Map(fx.map((e) => [e.id, e]));
-  const d = (e) => TIPOS[e.tipo].emoji + " " + TIPOS[e.tipo].n + (e.q ? " · " + e.q : "") + " · " + nombreF(e.f) + " " + e.a.toFixed(2) + "–" + e.b.toFixed(2) + " s";
+  const d = (e) => TIPOS[e.tipo].n + (e.q ? " · " + e.q : "") + " · " + nombreF(e.f) + " " + e.a.toFixed(2) + "–" + e.b.toFixed(2) + " s";
   const out = [];
   fx.filter((e) => !S.has(e.id)).forEach((e) => out.push("AÑADIDO · " + d(e) + " · caja " + caja(e) + extra(e)));
   semilla.filter((e) => !A.has(e.id)).forEach((e) => out.push("QUITADO · " + d(e)));
@@ -247,7 +259,7 @@ export function instalarFx(api) {
         c.style.transform = "scale(" + s + ")"; c.style.opacity = !dentro || fijo ? "" : String(Math.min(suave(seg / .12), suave(resta / .2)));
       }
       if (V(e) === "texto" || V(e) === "zona") {
-        const c = n.firstChild, txt = V(e) === "texto" ? (e.texto || TIPOS[e.tipo].n) : TIPOS[e.tipo].emoji + " " + TIPOS[e.tipo].n;
+        const c = n.firstChild, txt = V(e) === "texto" ? (e.texto || TIPOS[e.tipo].n) : TIPOS[e.tipo].n;
         if (c.textContent !== txt) c.textContent = txt;
         if (V(e) === "texto") c.style.fontSize = Math.max(10, Math.min(e.h * capa.clientHeight * .42, e.w * capa.clientWidth / Math.max(4, txt.length) * 1.7)) + "px";
         const k = !dentro || fijo ? 1 : Math.min(suave(seg / .15), suave(resta / .15));
@@ -342,12 +354,12 @@ export function instalarFx(api) {
   const [sQ, hQ] = sec("x-fx-quit", "Quitados");
   const listaQ = el("div", "x-fx-qlista"); sQ.appendChild(listaQ);
   panel.appendChild(el("p", "x-lm-fb-pie", "Solo es una vista previa: nada se monta hasta que lo pegues en tu Claude con «Copiar a Claude»."));
-  // --- el catálogo de la persona: emoji, nombre, cómo se hace y aspecto en la vista previa. Se guarda en datos/efectos.json.
+  // --- el catálogo de la persona: icono, nombre, cómo se hace y aspecto en la vista previa. Se guarda en datos/efectos.json.
   const [sCat, hCat] = sec("x-fx-catalogo", "Tu catálogo de efectos");
   const listaCat = el("div", "x-fx-catlista"); sCat.appendChild(listaCat);
-  const bNuevo = boton(sCat, "x-lm-b x-fx-catnuevo", "＋ Efecto nuevo", "Crea un efecto tuyo: su emoji, su nombre y cómo se hace");
+  const bNuevo = boton(sCat, "x-lm-b x-fx-catnuevo", "＋ Efecto nuevo", "Crea un efecto tuyo: su icono, su nombre y cómo se hace");
   let editando = null;   // id del efecto del catálogo que se está editando, o "nuevo"
-  const catActual = () => Object.entries(CAT).map(([id, T]) => ({ id, emoji: T.emoji, nombre: T.n, vista: T.vista, dur: T.dur, como: T.como || "" }));
+  const catActual = () => Object.entries(CAT).map(([id, T]) => ({ id, icono: T.icono, emoji: T.emoji, nombre: T.n, vista: T.vista, dur: T.dur, como: T.como || "" }));
   async function guardarCat(l, aviso) {
     const ok = api.guardarCatalogo ? await api.guardarCatalogo(limpiarCatalogo(l)) : true;
     if (ok === false) return false;
@@ -356,10 +368,16 @@ export function instalarFx(api) {
   function formCat(x) {
     const fm = el("form", "x-fx-catform"); fm.noValidate = true;
     const campoT = (txt, nodo) => { const l = el("label", "x-fx-campo"); l.appendChild(el("span", "", txt)); l.appendChild(nodo); fm.appendChild(l); return nodo; };
-    const iE = campoT("Emoji", document.createElement("input")); iE.value = x.emoji || "✨"; iE.maxLength = 8; iE.className = "x-fx-iemo";
+    let icono = ICONOS[x.icono] ? x.icono : ICONO_VISTA[x.vista] || "estrella";
+    const lI = el("div", "x-fx-campo"); lI.appendChild(el("span", "", "Icono")); const gI = el("div", "x-fx-icos"); gI.setAttribute("role", "radiogroup"); lI.appendChild(gI); fm.appendChild(lI);
+    const pintarIcos = () => gI.querySelectorAll("button").forEach((b) => { const on = b.dataset.k === icono; b.classList.toggle("x-on", on); b.setAttribute("aria-checked", on ? "true" : "false"); });
+    Object.entries(ICONOS).forEach(([k, [n, svg]]) => { const b = boton(gI, "x-fx-icob", "", n); b.type = "button"; b.dataset.k = k; b.setAttribute("role", "radio"); b.setAttribute("aria-label", n); b.innerHTML = svg; b.addEventListener("click", () => { icono = k; pintarIcos(); }); });
+    pintarIcos();
     const iN = campoT("Nombre", document.createElement("input")); iN.value = x.nombre || ""; iN.maxLength = 40; iN.placeholder = "p. ej. Texto del gancho";
     const iC = campoT("Cómo se hace", document.createElement("textarea")); iC.value = x.como || ""; iC.rows = 3; iC.placeholder = "Lo que lee tu Claude para hacerlo: tamaño, color, cuánto dura, sonido…"; iC.className = "x-lm-fb-ta";
     const iV = campoT("Se ve como", document.createElement("select")); Object.entries(VISTAS).forEach(([k, v]) => { const o = document.createElement("option"); o.value = k; o.textContent = v.n; iV.appendChild(o); }); iV.value = x.vista || "zona";
+    const iE = campoT("Emoji que sale en el vídeo", document.createElement("input")); iE.value = x.emoji || "✨"; iE.maxLength = 8; iE.className = "x-fx-iemo";
+    const verE = () => { iE.parentNode.hidden = iV.value !== "emoji"; }; iV.addEventListener("change", verE); verE();
     const iD = campoT("Dura (s)", document.createElement("input")); iD.type = "number"; iD.min = ".1"; iD.max = "60"; iD.step = ".1"; iD.value = String(x.dur || VISTAS[iV.value].dur);
     if (api.botonMic) iC.parentNode.appendChild(api.botonMic(iC));
     const ac = el("div", "x-fx-ac"); fm.appendChild(ac);
@@ -369,7 +387,7 @@ export function instalarFx(api) {
     fm.addEventListener("keydown", (ev) => { ev.stopPropagation(); if (ev.key === "Escape") { editando = null; pintarCat(); } });
     fm.addEventListener("submit", (ev) => {
       ev.preventDefault(); if (!iN.value.trim()) { iN.focus(); return api.aviso("Ponle un nombre al efecto"); }
-      const nuevo = { id: x.id || iN.value, emoji: iE.value, nombre: iN.value, como: iC.value, vista: iV.value, dur: +iD.value };
+      const nuevo = { id: x.id || iN.value, icono, emoji: iE.value, nombre: iN.value, como: iC.value, vista: iV.value, dur: +iD.value };
       const l = catActual(); const k = l.findIndex((y) => y.id === x.id); if (k >= 0) l[k] = nuevo; else l.push(nuevo);
       guardarCat(l, "«" + iN.value.trim() + "» guardado en tu catálogo");
     });
@@ -379,7 +397,7 @@ export function instalarFx(api) {
   function pintarCat() {
     listaCat.textContent = ""; hCat.textContent = "Tu catálogo de efectos · " + Object.keys(CAT).length;
     Object.entries(CAT).forEach(([id, T]) => {
-      if (editando === id) { listaCat.appendChild(formCat({ id, emoji: T.emoji, nombre: T.n, vista: T.vista, dur: T.dur, como: T.como })); return; }
+      if (editando === id) { listaCat.appendChild(formCat({ id, icono: T.icono, emoji: T.emoji, nombre: T.n, vista: T.vista, dur: T.dur, como: T.como })); return; }
       const f = el("div", "x-fx-catfila"); f.innerHTML = icoDe(id) + "<span><b></b><i></i></span>";
       f.querySelector("b").textContent = T.n + (T.k ? " (" + T.k + ")" : ""); f.querySelector("i").textContent = T.como || "Sin «cómo se hace»: tu Claude lo hará como lo entienda.";
       const b = boton(f, "x-lm-b", "Cambiar", "Cambia este efecto del catálogo"); b.addEventListener("click", () => { editando = id; pintarCat(); });

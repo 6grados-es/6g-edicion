@@ -27,7 +27,7 @@ Cada vídeo es una carpeta: `datos/videos/<id>/` (el id es `AAAA-MM-DD-titulo`).
 
 | `final/` | Las versiones finales en alta calidad (solo cuando la persona da el vídeo por bueno). Nunca se pisan. |
 | `encargo-<etapa>.md` | Lo último que la persona copió para ti en esa etapa (por si no te llega bien pegado). |
-| `datos/efectos.json` | Su catálogo de efectos (fuera de las carpetas de vídeo): `[{"id", "emoji", "nombre", "como", "vista", "dur"}]`. `como` dice cómo se hace ese efecto: síguelo al pie de la letra. Si te pide uno que no está, hazlo y añádelo con su emoji y cómo lo has hecho. |
+| `datos/efectos.json` | Su catálogo de efectos (fuera de las carpetas de vídeo): `[{"id", "icono", "nombre", "como", "vista", "dur", "emoji"?}]` (`icono`: uno de los iconos planos de la web, como zoom, texto, caja, blur, clic, estrella, flecha, lupa, raya, imagen, sonido, musica, corazon, check, comentar o video; `emoji` solo en los de vista «emoji»: es lo que sale en el vídeo). `como` dice cómo se hace ese efecto: síguelo al pie de la letra. Si te pide uno que no está, hazlo y añádelo con su icono y cómo lo has hecho. |
 
 `video.json`:
 ```json

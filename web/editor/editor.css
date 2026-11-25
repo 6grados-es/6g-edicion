@@ -423,3 +423,15 @@ html.x-lm-solo [data-x-lm-anc]{height:100vh!important;min-height:0!important}
 /* el de reproducir es blanco con texto negro (otras reglas de botón de la barra no lo pisan) */
 .x-lm .x-lm-ctl .x-lm-play{background:#fff;color:#000}
 .x-lm .x-lm-ctl .x-lm-play:hover{background:var(--x-red);color:#fff}
+/* iconos de los efectos: planos, de línea, como los de la app de clases */
+.x-fx-emo svg{width:100%;height:100%;display:block}
+.x-fx-catfila>.x-fx-emo{width:22px;height:22px}
+.x-fx-icos{display:flex;flex-wrap:wrap;gap:6px}
+.x-fx-icob{width:38px;height:38px;display:grid;place-items:center;padding:0;border-radius:10px;background:#fff;color:#000;border:1px solid #fff;cursor:pointer}
+.x-fx-icob svg{width:20px;height:20px}
+.x-fx-icob:hover{border-color:var(--x-red,#DC0A06)}
+.x-fx-icob.x-on{background:#000;color:#fff;border-color:#fff;box-shadow:0 0 0 2px #fff}
+/* pestañas: la elegida en negro y las demás en blanco, como en el resto de la app */
+.x-lm .x-lm-tab{background:#fff;color:#000;border-color:#fff}
+.x-lm .x-lm-tab:hover{color:#000;border-color:var(--x-red,#DC0A06)}
+.x-lm .x-lm-tab.x-on{background:#000;color:#fff;border-color:#fff;box-shadow:0 0 0 1px #fff}

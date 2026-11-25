@@ -239,3 +239,8 @@ body.completa .texto { max-height: calc(100vh - 260px); }
 /* en Corte y Edición el editor va suelto (es su propia mesa oscura): la caja de la etapa no se ve */
 .panel.panel-editor{background:none;border:0;padding:0;box-shadow:none}
 .panel.panel-editor>.ayuda-linea{margin:10px 4px 0}
+/* la etapa abierta, en negro; las demás, en blanco */
+.etapa.sel { background: var(--tinta); border-color: var(--tinta); box-shadow: none; color: var(--sobre-tinta); }
+.etapa.sel small, .etapa.sel.ahora small { color: var(--sobre-tinta); opacity: .75; }
+.etapa.sel .n { background: var(--sobre-tinta); border-color: var(--sobre-tinta); color: var(--tinta); }
+.etapa.sel.ahora .n { background: var(--rojo); border-color: var(--rojo); color: var(--sobre-rojo); }

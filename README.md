@@ -13,7 +13,7 @@ Instala con Homebrew `node`, `ffmpeg` y `whisper-cpp`, baja el modelo de transcr
 ## Qué hay
 - `servidor.mjs`: servidor local sin dependencias (127.0.0.1:4710). Cada vídeo es una carpeta en `datos/videos/<id>/`.
 - `web/`: la web (sin librerías), con la imagen de Reuniones de 6 Grados, claro y oscuro.
-- `web/editor/`: el editor de Corte y Edición, traído del editor de las clases de 6 Grados (recortar, recuperar desde o hasta la aguja, imán, reordenar trozos y partes, velocidad; en Edición, las pistas Notas, Vídeo, Visual y Sonido y el catálogo de efectos de cada persona, con su emoji y cómo se hace cada uno, en `datos/efectos.json`). Un ajuste (tecla V) enseña u oculta lo quitado en la línea de tiempo.
+- `web/editor/`: el editor de Corte y Edición, traído del editor de las clases de 6 Grados (recortar, recuperar desde o hasta la aguja, imán, reordenar trozos y partes, velocidad; en Edición, las pistas Notas, Vídeo, Visual y Sonido y el catálogo de efectos de cada persona, con su icono plano y cómo se hace cada uno, en `datos/efectos.json`). Un ajuste (tecla V) enseña u oculta lo quitado en la línea de tiempo.
 - `herramientas/transcribir.mjs` y `herramientas/montar.mjs`: lo que usa su Claude para transcribir y montar el corte. Mientras se revisa, todo sale en borrador (rápido y ligero); la calidad alta se hace solo con la versión final (`--final`, en `final/`, sin pisar nada).
 - `CLAUDE.md`: lo que lee su Claude (archivos, forma de `video.json` y receta de cada etapa).
 - `scripts/capturas.mjs`: capturas de todas las pantallas para revisar el diseño.
