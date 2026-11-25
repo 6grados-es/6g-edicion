@@ -181,6 +181,8 @@ export function moverPieza(l, desde, k) {
 
 // ---------- la interfaz (como el editor de grabación: vídeo grande, transcripción con lo cortado tachado y una línea de tiempo)
 // La línea de tiempo y el reloj son los del MONTAJE: lo que se ve de izquierda a derecha es el vídeo final, en su orden.
+// color de la onda: sigue el tema (blanca en oscuro, tinta en claro)
+const ondaColor = () => (getComputedStyle(document.querySelector(".x-lm") || document.documentElement).getPropertyValue("--x-onda").trim() || "#fff");
 export function pintarEditor(m, ctx) {
   const fuentes = ctx.editor.fuentes, F = new Map(fuentes.map((f) => [f.id, f]));
   // El paso Edición: mismo editor con el corte FIJO (el del último vídeo montado, del disco, nunca el del navegador), las pistas de
@@ -537,7 +539,7 @@ export function pintarEditor(m, ctx) {
     });
     carril.appendChild(aguja);
     requestAnimationFrame(() => {
-      lista.forEach((p) => { const b = elBl.get(p.id); if (b) onda(b.firstChild, p.f, p.a, p.b, saltos(p), p.vel, "#fff"); });
+      lista.forEach((p) => { const b = elBl.get(p.id); if (b) onda(b.firstChild, p.f, p.a, p.b, saltos(p), p.vel, ondaColor()); });
       carril.querySelectorAll(".x-lm-ct").forEach((c) => onda(c.firstChild, c.dataset.f, +c.dataset.a, +c.dataset.b, [], 1, "#8b9099"));
       marcar(); pintarAguja(); if (pistas) pistas.pintar();
     });
@@ -698,7 +700,7 @@ export function pintarEditor(m, ctx) {
       if (pegado && !antes) { try { navigator.vibrate && navigator.vibrate(8); } catch (err) {} }
       bl.classList.toggle("x-lm-iman", pegado); aguja.classList.toggle("x-lm-iman", pegado);
       const w = Math.max(10, dM(n) * pps); bl.style.width = w + "px"; ct.style.width = Math.max(0, ctW0 + (w0 - w)) + "px";
-      onda(bl.firstChild, n.f, n.a, n.b, saltosDe(n, silDe(n), regla), n.vel, "#fff");
+      onda(bl.firstChild, n.f, n.a, n.b, saltosDe(n, silDe(n), regla), n.vel, ondaColor());
       { const mn = bl.querySelector(".x-lm-min"); if (mn) minis(mn, n, saltosDe(n, silDe(n), regla), w); }
       info.textContent = "Trozo " + (i + 1) + " · dura " + fmt(dM(n)) + (pegado ? " · pegado a la aguja" : " (" + (lado === "a" ? "empieza" : "acaba") + " en " + (lado === "a" ? n.a : n.b).toFixed(1) + " s de la grabación)");
     };

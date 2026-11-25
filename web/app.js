@@ -62,7 +62,7 @@ bTema.addEventListener('click', () => {
   const osc = document.documentElement.dataset.tema !== 'oscuro';
   if (osc) document.documentElement.dataset.tema = 'oscuro'; else delete document.documentElement.dataset.tema;
   try { localStorage.setItem('6g-edicion.tema', osc ? 'oscuro' : ''); } catch (e) {}
-  pintarTema(); if (ED.pintarOnda) ED.pintarOnda();
+  pintarTema(); if (conEditor()) pintar();   // el editor se vuelve a montar para que la onda coja el color del tema
 });
 pintarTema();
 
