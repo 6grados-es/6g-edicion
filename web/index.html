@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edición · 6 Grados</title>
+<link rel="icon" href="marca/isotipo-6grados.svg">
+<link rel="stylesheet" href="estilo.css">
+<script>try { const t = localStorage.getItem('6g-edicion.tema'); if (t) document.documentElement.dataset.tema = t; } catch (e) {}</script>
+</head>
+<body>
+<header class="cab">
+  <div class="cab-in">
+    <a class="marca" href="#/" aria-label="Edición, ir al tablero">
+      <img class="logo-claro" src="marca/logo-6grados-tinta.svg" alt="6 Grados"><img class="logo-noche" src="marca/logo-6grados-blanco.svg" alt="6 Grados">
+      <span class="app">Edición</span>
+    </a>
+    <div class="cab-der">
+      <button class="bt chico" id="b-atajos" type="button">Atajos (?)</button>
+      <button class="bt icono" id="b-tema" type="button" aria-label="Cambiar a modo oscuro" title="Modo claro u oscuro"></button>
+    </div>
+  </div>
+</header>
+<main id="app"></main>
+<script src="app.js"></script>
+</body>
+</html>

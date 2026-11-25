@@ -1,0 +1,5 @@
+datos/
+.DS_Store
+*.tmp
+# capturas del diagnóstico (pesan ~46 MB): se quedan en el Mac de quien lo hace
+diagnostico/
